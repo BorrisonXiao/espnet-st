@@ -66,6 +66,7 @@ class ESPnetSTModel(AbsESPnetModel):
         mtlalpha: float = 0.0,
         st_mtlalpha: float = 0.0,
         ignore_id: int = -1,
+        src_ignore_id: int = -1,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
         report_cer: bool = True,
@@ -101,6 +102,7 @@ class ESPnetSTModel(AbsESPnetModel):
         self.vocab_size = vocab_size
         self.src_vocab_size = src_vocab_size
         self.ignore_id = ignore_id
+        self.src_ignore_id = src_ignore_id
         self.asr_weight = asr_weight
         self.mt_weight = mt_weight
         self.mtlalpha = mtlalpha
@@ -151,7 +153,7 @@ class ESPnetSTModel(AbsESPnetModel):
 
         self.criterion_asr = LabelSmoothingLoss(
             size=src_vocab_size,
-            padding_idx=ignore_id,
+            padding_idx=src_ignore_id,
             smoothing=lsm_weight,
             normalize_length=length_normalized_loss,
         )
@@ -585,7 +587,7 @@ class ESPnetSTModel(AbsESPnetModel):
                 skip_loss = True
 
         ys_in_pad, ys_out_pad = add_sos_eos(
-            ys_pad, self.src_sos, self.src_eos, self.ignore_id
+            ys_pad, self.src_sos, self.src_eos, self.src_ignore_id
         )
         ys_in_lens = ys_pad_lens + 1
 
@@ -608,7 +610,7 @@ class ESPnetSTModel(AbsESPnetModel):
         acc_att = th_accuracy(
             decoder_out.view(-1, self.src_vocab_size),
             ys_out_pad,
-            ignore_label=self.ignore_id,
+            ignore_label=self.src_ignore_id,
         )
 
         # Compute cer/wer using attention-decoder

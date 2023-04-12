@@ -112,10 +112,8 @@ class FairseqTransformersDecoder(AbsDecoder):
             hs_pad[0]).cuda()], "encoder_padding_mask": [hs_mask]}
 
         x = self.decoder(**args)[0]
-        # x = self.cls_head(x)
 
         olens = ys_in_lens.to(torch.int)
-        # breakpoint()
         return x, olens
 
     def reload_pretrained_parameters(self):

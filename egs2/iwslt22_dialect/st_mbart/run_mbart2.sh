@@ -5,22 +5,17 @@ set -e
 set -u
 set -o pipefail
 
-bash /alt-arabic/speech/amir/competitions/IWSLT/brian/espnet-ml/tools/extra_path.sh
+# bash /alt-arabic/speech/amir/competitions/IWSLT/brian/espnet-ml/tools/extra_path.sh
 
 src_lang=ta
 tgt_lang=en
 
-#train_set=train.en-${tgt_lang}
-#train_dev=dev.en-${tgt_lang}
-#test_set="tst-COMMON.en-${tgt_lang} tst-HE.en-${tgt_lang}"
 train_set=train
 train_dev=dev
 test_set=test1
 
-st_config=conf/config_mbart_fairseq.yaml #best results md_heir
-#st_config=conf/train_st_ctc_md_conformer_mt_asr3.yaml
+st_config=conf/config_mbart_fairseq.yaml
 inference_config=conf/tuning/decode_st_md_ctc0.3_mbart.yaml
-#inference_config=conf/tuning/decode_st_md_ctc0.3_length.yaml
 src_nbpe=2000
 
 # tc: truecase
@@ -32,7 +27,7 @@ tgt_case=tc
 ./st.sh \
 	--st_stats_dir exp_mbart/st_stats_raw_ta_en_fairseq \
 	--expdir exp_mbart \
-	--dumpdir dump_mbart \
+	--dumpdir dump \
 	--num_nodes 1 \
 	--datadir data8KHz \
 	--bpe_predefined true \
@@ -43,9 +38,9 @@ tgt_case=tc
 	--stage 10 \
     --stop_stage 10\
 	--fs 8k \
-    --nj 1 \
+    --nj 16 \
 	--feats_normalize utterance_mvn \
-    --inference_nj 1 \
+    --inference_nj 64 \
     --audio_format "flac.ark" \
     --src_lang ${src_lang} \
     --tgt_lang ${tgt_lang} \
@@ -63,7 +58,7 @@ tgt_case=tc
     --test_sets "${test_set} ${train_dev}" \
     --src_bpe_train_text "data/${train_set}/text.${src_case}.${src_lang}" \
     --tgt_bpe_train_text "data/${train_set}/text.${tgt_case}.${tgt_lang}" \
-	--lm_train_text "data/${train_set}/text.${src_case}.${src_lang}"  "$@" 
+	--lm_train_text "data/${train_set}/text.${src_case}.${src_lang}"  "$@"
 	#--use_src_lm true \
 	#--src_lm_exp /alt-arabic/speech/amir/competitions/IWSLT/asr_tuned/exp/lm_rnn_lm_bpe1000 \
 	# --tgt_token_type hugging_face \

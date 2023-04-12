@@ -171,7 +171,7 @@ class FairseqTransformersEncoder(AbsEncoder):
 
         output = self.transformer(**args)["encoder_out"]
 
-        return output, input_lengths
+        return output, input_lengths, None
 
     def reload_pretrained_parameters(self):
         self.transformer.load_state_dict(self.pretrained_params)
@@ -179,4 +179,4 @@ class FairseqTransformersEncoder(AbsEncoder):
 
     def output_size(self) -> int:
         """Get the output size."""
-        return self.transformer.config.hidden_size
+        return self.transformer.layers[-1].final_layer_norm.normalized_shape[0]

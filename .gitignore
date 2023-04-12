@@ -87,3 +87,9 @@ tools/anaconda
 tools/ice-g2p*
 tools/fairseq*
 tools/featbin*
+tools_imported
+tools/miniconda
+tools/Miniconda3-latest-Linux-x86_64.sh
+
+egs2/iwslt22_dialect/st_mbart/exp_mbart
+egs2/iwslt22_dialect/st_mbart/pretrained

@@ -1,6 +1,5 @@
 batch_type: numel
-#batch_bins: 10000000
-batch_bins: 500000
+batch_bins: 10000000
 #batch_bins: 20000000
 accum_grad: 2
 max_epoch: 15
@@ -12,7 +11,7 @@ best_model_criterion:
       - max
 keep_nbest_models: 10
 # use_amp: true       # automatic mixed precision (amp)
-num_workers: 0
+num_workers: 2
 
 encoder: branchformer
 encoder_conf:
@@ -37,26 +36,9 @@ encoder_conf:
     input_layer: conv2d
     stochastic_depth_rate: 0.0
 
-# hier_encoder: conformer
-# hier_encoder_conf:
-#     input_layer: null
-#     num_blocks: 6
-#     linear_units: 1024
-#     dropout_rate: 0.1
-#     positional_dropout_rate: 0.1
-#     attention_dropout_rate: 0.1
-#     normalize_before: true
-#     macaron_style: true
-#     rel_pos_type: latest
-#     pos_enc_layer_type: rel_pos
-#     selfattention_layer_type: rel_selfattn
-#     activation_type: swish
-#     use_cnn_module: true
-#     cnn_module_kernel: 31
-
 decoder: fairseq_transformers
 decoder_conf:
-    model_name_or_path: /alt-arabic/speech/amir/competitions/IWSLT/mbart/fairseq_mbart_cc25
+    model_name_or_path: /home/cxiao7/research/iwslt2023/dialect/mbart
 
 extra_asr_decoder: transformer
 extra_asr_decoder_conf:
@@ -69,7 +51,7 @@ extra_asr_decoder_conf:
 
 md_encoder: fairseq_transformers
 md_encoder_conf:
-    model_name_or_path: /alt-arabic/speech/amir/competitions/IWSLT/mbart/fairseq_mbart_cc25
+    model_name_or_path: /home/cxiao7/research/iwslt2023/dialect/mbart
     length_adaptor_n_layers: 0
     lang_token_id: 250001 # Not sure what this should be in our case
 
@@ -79,8 +61,9 @@ model_conf:
     mtlalpha: 0.3
     st_mtlalpha: 0
     lsm_weight: 0.1
-    length_normalized_loss: false
-    extract_feats_in_collect_stats: false
+    # length_normalized_loss: false
+    # extract_feats_in_collect_stats: false
+    src_ignore_id: -1
     ignore_id: 1
     tgt_sym_blank: "<pad>"
     tgt_sym_sos: "<s>"
@@ -118,9 +101,9 @@ specaug_conf:
 
 ignore_init_mismatch: true
 init_param:
-    - "/alt-arabic/speech/amir/competitions/IWSLT/finetuneMGB2_8KHz/exp_mixed/asr_finetune_asr_branchformer_raw_bpe2000_sp/valid.acc.ave_10best.pth:encoder:encoder"
-    - "/alt-arabic/speech/amir/competitions/IWSLT/finetuneMGB2_8KHz/exp_mixed/asr_finetune_asr_branchformer_raw_bpe2000_sp/valid.acc.ave_10best.pth:ctc:ctc"
-    - "/alt-arabic/speech/amir/competitions/IWSLT/finetuneMGB2_8KHz/exp_mixed/asr_finetune_asr_branchformer_raw_bpe2000_sp/valid.acc.ave_10best.pth:decoder:extra_asr_decoder"
+    - "/home/cxiao7/research/espnet-st/egs2/iwslt22_dialect/st_mbart/pretrained/exp_call_mixed/asr_finetune_asr_branchformer_raw_bpe2000_sp/valid.acc.ave_10best.pth:encoder:encoder"
+    - "/home/cxiao7/research/espnet-st/egs2/iwslt22_dialect/st_mbart/pretrained/exp_call_mixed/asr_finetune_asr_branchformer_raw_bpe2000_sp/valid.acc.ave_10best.pth:ctc:ctc"
+    - "/home/cxiao7/research/espnet-st/egs2/iwslt22_dialect/st_mbart/pretrained/exp_call_mixed/asr_finetune_asr_branchformer_raw_bpe2000_sp/valid.acc.ave_10best.pth:decoder:extra_asr_decoder"
 freeze_param:
     - "decoder"
     - "md_encoder"

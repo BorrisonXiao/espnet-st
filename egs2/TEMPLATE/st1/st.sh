@@ -1345,7 +1345,7 @@ if ! "${skip_train}"; then
                 --valid_data_path_and_name_and_type "${_st_valid_dir}/text.${tgt_case}.${tgt_lang},text,text" \
                 --valid_shape_file "${st_stats_dir}/valid/speech_shape" \
                 --valid_shape_file "${st_stats_dir}/valid/text_shape.${tgt_token_type}" \
-                --resume true \
+                --resume false \
                 --fold_length "${_fold_length}" \
                 --fold_length "${st_text_fold_length}" \
                 --output_dir "${st_exp}" \

@@ -594,31 +594,6 @@ class STTask(AbsTask):
         else:
             postencoder = None
 
-        # 5. Decoder
-        decoder_class = decoder_choices.get_class(args.decoder)
-
-        if args.decoder == "transducer":
-            decoder = decoder_class(
-                vocab_size,
-                embed_pad=0,
-                **args.decoder_conf,
-            )
-
-            st_joint_network = JointNetwork(
-                vocab_size,
-                encoder_output_size,
-                decoder.dunits,
-                **args.st_joint_net_conf,
-            )
-        else:
-            decoder = decoder_class(
-                vocab_size=vocab_size,
-                encoder_output_size=encoder_output_size,
-                **args.decoder_conf,
-            )
-
-            st_joint_network = None
-
         # 6. CTC
         if src_token_list is not None:
             ctc = CTC(
@@ -669,8 +644,35 @@ class STTask(AbsTask):
             md_encoder_class = md_encoder_choices.get_class(args.md_encoder)
             md_encoder = md_encoder_class(
                 input_size=extra_asr_decoder._output_size_bf_softmax, **args.md_encoder_conf)
+            encoder_output_size = md_encoder.output_size()
         else:
             md_encoder = None
+
+        # 5. Decoder
+        # Cihan: This is moved since the decoder is getting input from the output of the md_encoder
+        decoder_class = decoder_choices.get_class(args.decoder)
+
+        if args.decoder == "transducer":
+            decoder = decoder_class(
+                vocab_size,
+                embed_pad=0,
+                **args.decoder_conf,
+            )
+
+            st_joint_network = JointNetwork(
+                vocab_size,
+                encoder_output_size,
+                decoder.dunits,
+                **args.st_joint_net_conf,
+            )
+        else:
+            decoder = decoder_class(
+                vocab_size=vocab_size,
+                encoder_output_size=encoder_output_size,
+                **args.decoder_conf,
+            )
+
+            st_joint_network = None
 
         # 10. Build model
         # if getattr(args, "md_version", None) == "v2":
