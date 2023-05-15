@@ -109,6 +109,9 @@ class FairseqTransformersEncoder(AbsEncoder):
         self.linear_in = torch.nn.Linear(
             input_size, embed_dim
         )
+        # TODO: Add an if to control the in-out dimension of the linear layer
+
+        # self.alc = torch.nn.MultiheadAttention(embed_dim=embed_dim, num_heads=4, dropout=0.1)
 
         # Length Adaptor as in https://aclanthology.org/2021.acl-long.68.pdf
 
@@ -141,6 +144,8 @@ class FairseqTransformersEncoder(AbsEncoder):
         input = input.permute(0, 2, 1)
         input = self.length_adaptor(input)
         input = input.permute(0, 2, 1)
+
+        breakpoint()
 
         input_lengths = (
             input_lengths.float().div(self.length_adaptor_ratio).floor().long()

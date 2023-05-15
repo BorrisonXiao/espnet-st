@@ -15,7 +15,7 @@ train_dev=dev
 test_set=test1
 
 st_config=conf/config_mbart_fairseq.yaml
-inference_config=conf/tuning/decode_st_md_ctc0.3_mbart.yaml
+inference_config=conf/tuning/decode_st_fairseq_mbart.yaml
 src_nbpe=2000
 
 # tc: truecase
@@ -40,7 +40,7 @@ tgt_case=tc
 	--fs 8k \
     --nj 16 \
 	--feats_normalize utterance_mvn \
-    --inference_nj 64 \
+    --inference_nj 12 \
     --audio_format "flac.ark" \
     --src_lang ${src_lang} \
     --tgt_lang ${tgt_lang} \

@@ -130,11 +130,11 @@ inference_args=   # Arguments for decoding, e.g., "--lm_weight 0.1".
 inference_lm=valid.loss.ave.pth     # Language model path for decoding.
 inference_asr_lm=valid.loss.ave.pth # Language model path for decoding.
 inference_ngram=${ngram_num}gram.bin
-inference_st_model=valid.acc.ave.pth # ST model path for decoding.
+# inference_st_model=valid.acc.ave.pth # ST model path for decoding.
 # e.g.
 # inference_st_model=train.loss.best.pth
 # inference_st_model=3epoch.pth
-# inference_st_model=valid.acc.best.pth
+inference_st_model=valid.acc.best.pth
 # inference_st_model=valid.loss.ave.pth
 download_model= # Download a model from Model Zoo and use it for decoding.
 
@@ -1338,13 +1338,42 @@ if ! "${skip_train}"; then
         fi
 
         # TODO(jiatong): fix bpe
+        # # shellcheck disable=SC2086
+        # ${python} -m espnet2.bin.launch \
+        #     --cmd "${cuda_cmd} --name ${jobname}" \
+        #     --log "${st_exp}"/train.log \
+        #     --ngpu "${ngpu}" \
+        #     --num_nodes "${num_nodes}" \
+        #     --init_file_prefix "${st_exp}"/.dist_init_ \
+        #     --multiprocessing_distributed true -- \
+        #     ${python} -m espnet2.bin.st_train_fairseq_mbart \
+        #     --use_preprocessor true \
+        #     --bpemodel "${tgt_bpemodel}" \
+        #     --token_type "${tgt_token_type}" \
+        #     --token_list "${tgt_token_list}" \
+        #     --src_token_type "${src_token_type}" \
+        #     --src_token_list "${src_token_list}" \
+        #     --non_linguistic_symbols "${nlsyms_txt}" \
+        #     --cleaner "${cleaner}" \
+        #     --g2p "${g2p}" \
+        #     --valid_data_path_and_name_and_type "${_st_valid_dir}/${_scp},speech,${_type}" \
+        #     --valid_data_path_and_name_and_type "${_st_valid_dir}/text.${tgt_case}.${tgt_lang},text,text" \
+        #     --valid_shape_file "${st_stats_dir}/valid/speech_shape" \
+        #     --valid_shape_file "${st_stats_dir}/valid/text_shape.${tgt_token_type}" \
+        #     --resume true \
+        #     --fold_length "${_fold_length}" \
+        #     --fold_length "${st_text_fold_length}" \
+        #     --output_dir "${st_exp}" \
+        #     ${_opts} ${st_args}
+
+        mkdir -p "exp_mbart_test"
         # shellcheck disable=SC2086
         ${python} -m espnet2.bin.launch \
             --cmd "${cuda_cmd} --name ${jobname}" \
-            --log "${st_exp}"/train.log \
-            --ngpu "${ngpu}" \
+            --log "exp_mbart_test"/train.log \
+            --ngpu "1" \
             --num_nodes "${num_nodes}" \
-            --init_file_prefix "${st_exp}"/.dist_init_ \
+            --init_file_prefix "exp_mbart_test"/.dist_init_ \
             --multiprocessing_distributed true -- \
             ${python} -m espnet2.bin.st_train_fairseq_mbart \
                 --use_preprocessor true \
@@ -1360,10 +1389,10 @@ if ! "${skip_train}"; then
                 --valid_data_path_and_name_and_type "${_st_valid_dir}/text.${tgt_case}.${tgt_lang},text,text" \
                 --valid_shape_file "${st_stats_dir}/valid/speech_shape" \
                 --valid_shape_file "${st_stats_dir}/valid/text_shape.${tgt_token_type}" \
-                --resume true \
+                --resume false \
                 --fold_length "${_fold_length}" \
                 --fold_length "${st_text_fold_length}" \
-                --output_dir "${st_exp}" \
+                --output_dir "exp_mbart_test" \
                 ${_opts} ${st_args}
 
         # ${python} -m espnet2.bin.st_train_fairseq_mbart \
@@ -1383,7 +1412,7 @@ if ! "${skip_train}"; then
         #     --resume true \
         #     --fold_length "${_fold_length}" \
         #     --fold_length "${st_text_fold_length}" \
-        #     --output_dir "${st_exp}" \
+        #     --output_dir "exp_mbart_test" \
         #     ${_opts} ${st_args}
 
     fi
@@ -1496,7 +1525,7 @@ if ! "${skip_eval}"; then
             if "${use_streaming}"; then
                 st_inference_tool="espnet2.bin.st_inference_streaming"
             else
-                st_inference_tool="espnet2.bin.st_inference_mbart"
+                st_inference_tool="espnet2.bin.st_inference_fairseq"
             fi
 
             for n in $(seq "${_nj}"); do
@@ -1507,20 +1536,39 @@ if ! "${skip_eval}"; then
 
             # 2. Submit decoding jobs
             log "Decoding started... log: '${_logdir}/st_inference.*.log'"
-            # shellcheck disable=SC2046,SC2086
-            ${_cmd} --gpu "${_ngpu}" JOB=1:"${_nj}" "${_logdir}"/st_inference.JOB.log \
-                ${python} -m ${st_inference_tool} \
+            # # shellcheck disable=SC2046,SC2086
+            # ${_cmd} --gpu "${_ngpu}" JOB=1:"${_nj}" "${_logdir}"/st_inference.JOB.log \
+            #     ${python} -m ${st_inference_tool} \
+            #     --batch_size ${batch_size} \
+            #     --ngpu "${_ngpu}" \
+            #     --data_path_and_name_and_type "${_data}/${_scp},speech,${_type}" \
+            #     --key_file "${_logdir}"/keys.JOB.scp \
+            #     --st_train_config "${st_exp}"/config.yaml \
+            #     --st_model_file "${st_exp}"/"${inference_st_model}" \
+            #     --output_dir "${_logdir}"/output.JOB \
+            #     ${_opts} ${inference_args} || {
+            #     cat $(grep -l -i error "${_logdir}"/st_inference.*.log)
+            #     exit 1
+            # }
+            # ${python} -m ${st_inference_tool} \
+            #     --batch_size ${batch_size} \
+            #     --ngpu "${_ngpu}" \
+            #     --data_path_and_name_and_type "${_data}/${_scp},speech,${_type}" \
+            #     --key_file "${_logdir}"/keys.1.scp \
+            #     --st_train_config "${st_exp}"/config.yaml \
+            #     --st_model_file "${st_exp}"/"${inference_st_model}" \
+            #     --output_dir "${_logdir}"/output.1 \
+            #     ${_opts} ${inference_args}
+
+            ${python} -m ${st_inference_tool} \
                 --batch_size ${batch_size} \
                 --ngpu "${_ngpu}" \
                 --data_path_and_name_and_type "${_data}/${_scp},speech,${_type}" \
-                --key_file "${_logdir}"/keys.JOB.scp \
-                --st_train_config "${st_exp}"/config.yaml \
-                --st_model_file "${st_exp}"/"${inference_st_model}" \
-                --output_dir "${_logdir}"/output.JOB \
-                ${_opts} ${inference_args} || {
-                cat $(grep -l -i error "${_logdir}"/st_inference.*.log)
-                exit 1
-            }
+                --key_file "${_logdir}"/keys.1.scp \
+                --st_train_config "exp_mbart_test"/config.yaml \
+                --st_model_file "exp_mbart_test"/"${inference_st_model}" \
+                --output_dir "${_logdir}"/output.1 \
+                ${_opts} ${inference_args}
 
             # 3. Concatenates the output files from each jobs
             for f in token token_int score text; do

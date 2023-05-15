@@ -492,6 +492,8 @@ class Trainer:
             except TypeError:
                 log_interval = 100
 
+        logging.info(f"log_interval={log_interval}")
+
         model.train()
         all_steps_are_invalid = True
         # [For distributed] Because iteration counts are not always equals between
@@ -503,6 +505,9 @@ class Trainer:
             reporter.measure_iter_time(iterator, "iter_time"), 1
         ):
             assert isinstance(batch, dict), type(batch)
+            # if iiter >= 5:
+            #     logging.info(f"batch: {batch}, training stopped...")
+            #     break
 
             if distributed:
                 torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)

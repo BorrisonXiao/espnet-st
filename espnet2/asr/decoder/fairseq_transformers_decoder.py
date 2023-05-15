@@ -7,13 +7,15 @@
 
 import copy
 import logging
-from typing import Tuple
+from typing import Any, List, Tuple
 
 import torch
 from typeguard import check_argument_types
 
 from espnet2.asr.decoder.abs_decoder import AbsDecoder
 from espnet.nets.pytorch_backend.nets_utils import make_pad_mask
+
+from espnet.nets.scorer_interface import BatchScorerInterface
 
 try:
     from fairseq.models.bart import BARTModel
@@ -23,7 +25,7 @@ except ImportError:
     is_fairseq_available = False
 
 
-class FairseqTransformersDecoder(AbsDecoder):
+class FairseqTransformersDecoder(AbsDecoder, BatchScorerInterface):
     """Fairseq Transformers Decoder.
 
     Args:
@@ -98,14 +100,7 @@ class FairseqTransformersDecoder(AbsDecoder):
             olens: (batch, )
         """
         args = {}
-
-        if self.decoder.__class__.__name__ == "MBartDecoder" or self.decoder_class == "BARTModel":
-            ys_in_pad[:, 0] = 2
-
         args["prev_output_tokens"] = ys_in_pad
-        # mask = (~make_pad_mask(ys_in_lens)).to(ys_in_pad.device).float()
-        # args["attention_mask"] = mask
-
         args["src_lengths"] = hlens.to(torch.int)
         hs_mask = (make_pad_mask(hlens)).to(hs_pad[0].device).float()
         args["encoder_out"] = {"encoder_out": [self.linear_in(
@@ -120,3 +115,62 @@ class FairseqTransformersDecoder(AbsDecoder):
         self.decoder.load_state_dict(self.decoder_pretrained_params)
         self.cls_head.load_state_dict(self.cls_head_pretrained_params)
         logging.info("Pretrained Transformers model parameters reloaded!")
+
+    def score(self, ys: torch.Tensor, state: List[Any], x: torch.Tensor, pre_x: torch.Tensor, return_hs: bool = False):
+        """
+        Args:
+            ys: (maxlen_out)
+            x: (maxlen_in, 1, feat)
+
+        Returns:
+            next_token_logits: (vocab_size)
+        """
+        args = {}
+        args["prev_output_tokens"] = ys.unsqueeze(0)  # 1 x T
+
+        hlens = torch.tensor([x.shape[0]]).to(x.device)
+        args["src_lengths"] = hlens.to(torch.int)
+        hs_mask = (make_pad_mask(hlens)).to(x.device).float()
+        args["encoder_out"] = {"encoder_out": [self.linear_in(
+            x).to(x.device)], "encoder_padding_mask": [hs_mask]}
+
+        outputs = self.decoder(**args)[0]  # 1 x T x V
+
+        next_token_logits = outputs[:, -1, :]
+        next_token_scores = torch.nn.functional.log_softmax(
+            next_token_logits, dim=-1
+        )  # (1, vocab_size)
+
+        return next_token_scores.squeeze(0), None
+
+    def batch_score(
+        self, ys: torch.Tensor, states: List[Any], xs: torch.Tensor, pre_x: torch.Tensor, speech: torch.Tensor = None,
+    ) -> Tuple[torch.Tensor, List[Any]]:
+        """
+        Args:
+            ys: (num_beams, maxlen_out)
+            xs: (1, maxlen_in, num_beams, feat)
+
+        Returns:
+            next_token_logits: (num_beams, vocab_size)
+        """
+        xs1 = xs.squeeze(2)
+        xs1 = xs1.permute(1, 0, 2)
+        args = {}
+        args["prev_output_tokens"] = ys
+
+        # Same encoder output, only different hypothesis (beams)
+        hlens = torch.tensor([xs1.shape[0] for _ in range(xs1.shape[1])]).to(xs.device)
+        args["src_lengths"] = hlens.to(torch.int)
+        hs_mask = (make_pad_mask(hlens)).to(xs.device).float()
+        args["encoder_out"] = {"encoder_out": [self.linear_in(
+            xs1).to(xs.device)], "encoder_padding_mask": [hs_mask]}
+
+        outputs = self.decoder(**args)[0]  # B x T x V
+
+        next_token_logits = outputs[:, -1, :]
+        next_token_scores = torch.nn.functional.log_softmax(
+            next_token_logits, dim=-1
+        )  # (num_beams, vocab_size)
+
+        return next_token_scores, None
